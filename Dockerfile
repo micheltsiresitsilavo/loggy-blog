@@ -1,11 +1,7 @@
 FROM tangramor/nginx-php8-fpm
 
 # Enable Extensions.
-RUN apk add --no-cache --update --virtual .phpize-deps $PHPIZE_DEPS \
-    && apk add --no-cache --update --virtual .all-deps $PHP_MODULE_DEPS \
-    && pecl install postgresql-dev \
-    && rm -rf /tmp/pear \
-    && apk del .all-deps .phpize-deps \
+RUN  apk add --no-cache postgresql-dev \
     && rm -rf /var/cache/apk/* /tmp/* /var/tmp/*
 
 RUN docker-php-ext-configure pgsql -with-pgsql=/user/local/pgsql \

@@ -1,65 +1,58 @@
-# Use an official PHP image with Apache as the base image.
-FROM php:8.2-apache
+FROM tangramor/nginx-php8-fpm
 
-# Set environment variables.
-ENV ACCEPT_EULA=Y
-LABEL maintainer="er.avinashrathod@gmail.com"
-
-# Install system dependencies.
-RUN apt-get update && apt-get install -y \
-    libpng-dev \
-    libjpeg-dev \
-    libfreetype6-dev \
-    libpq-dev \
-    libzip-dev \
-    libicu-dev \
-    zip \
-    unzip \
-    git \
-    npm \
-    && rm -rf /var/lib/apt/lists/* 
-
-# Enable Apache modules required for Laravel.
-RUN a2enmod rewrite
-
-# Set the Apache document root
-ENV APACHE_DOCUMENT_ROOT /var/www/html/public
-
-# Update the default Apache site configuration
-COPY apache-config.conf /etc/apache2/sites-available/000-default.conf
-
-RUN echo 'ServerName loggy-973c.onrender.com' >> /etc/apache2/apache2.conf
-# Install PHP extensions.
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg \ 
-&& docker-php-ext-install -j$(nproc) gd intl zip exif 
+# Enable Extensions.
 RUN docker-php-ext-configure pgsql -with-pgsql=/user/local/pgsql \
-&& docker-php-ext-install  pdo pdo_pgsql pgsql 
-# RUN docker-php-ext-install  pdo pdo_pgsql pgsql intl zip exif  
-RUN docker-php-ext-enable intl zip pdo_pgsql pgsql exif
+    && docker-php-ext-enable intl zip pdo_pgsql pgsql exif
+   
+# copy source code
+COPY . /var/www/html
 
+# If there is a conf folder under /var/www/html, the start.sh will
+# copy conf/nginx.conf to /etc/nginx/nginx.conf
+# copy conf/nginx-site.conf to /etc/nginx/conf.d/default.conf
+# copy conf/nginx-site-ssl.conf to /etc/nginx/conf.d/default-ssl.conf
 
-# Install Composer globally..
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+# copy ssl cert files
+# COPY conf/ssl /etc/nginx/ssl
 
-# Create a directory for your Laravel application.
-WORKDIR /var/www/html
+# China alpine mirror: mirrors.ustc.edu.cn
+ARG APKMIRROR=""
 
-# Copy the Laravel application files into the container.
-COPY . .
+# start.sh will set desired timezone with $TZ
+ENV TZ Europe/London
 
-# Install Laravel dependencies using Composer.
-RUN composer install --no-interaction --optimize-autoloader
+# China php composer mirror: https://mirrors.cloud.tencent.com/composer/
+ENV COMPOSERMIRROR="https://packagist.pages.dev"
+# China npm mirror: https://registry.npmmirror.com
+ENV NPMMIRROR="https://registry.npm.taobao.org"
 
-# Set permissions for Laravel.
-RUN chown -R www-data:www-data /var/www/html storage bootstrap/cache
- 
-# Expose port 80 for Apache.
-EXPOSE 80
+# start.sh will replace default web root from /var/www/html to $WEBROOT
+ENV WEBROOT /var/www/html/public
 
-# Start Apache web server.
-CMD ["apache2-foreground"]
+# start.sh will use redis as session store with docker container name $PHP_REDIS_SESSION_HOST
+ENV PHP_REDIS_SESSION_HOST redis
 
-# You can add any additional configurations or commands required for Laravel 10 here.
-# Install NPM dependencies
-RUN npm install && npm run build
+# start.sh will create laravel storage folder structure if $CREATE_LARAVEL_STORAGE = 1
+ENV CREATE_LARAVEL_STORAGE "0"
 
+# download required node/php packages, 
+# some node modules need gcc/g++ to build
+RUN if [[ "$APKMIRROR" != "" ]]; then sed -i "s/dl-cdn.alpinelinux.org/${APKMIRROR}/g" /etc/apk/repositories ; fi\
+    && apk add --no-cache --virtual .build-deps gcc g++ libc-dev make \
+    # set preferred npm mirror
+    && cd /usr/local \
+    && if [[ "$NPMMIRROR" != "" ]]; then npm config set registry ${NPMMIRROR}; fi \
+    && npm config set registry $NPMMIRROR \
+    && cd /var/www/html \
+    # install node modules
+    && npm install \
+    # install php composer packages
+    && if [[ "$COMPOSERMIRROR" != "" ]]; then composer config -g repos.packagist composer ${COMPOSERMIRROR}; fi \
+    && composer install --no-interaction --optimize-autoloader \
+    # clean
+    && apk del .build-deps \
+    # build js/css
+    && npm run build \
+
+    # change /var/www/html user/group
+    && chown -Rf nginx.nginx /var/www/html

@@ -1,61 +1,73 @@
-FROM tangramor/nginx-php8-fpm
+# Use PHP with Apache as the base image
+FROM php:8.2-apache as web
 
-# Enable Extensions.
-RUN  apk add --no-cache postgresql-dev \
-    && rm -rf /var/cache/apk/* /tmp/* /var/tmp/*
+# Install Additional System Dependencies
+RUN apt-get update && apt-get install -y \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    libpq-dev \
+    libzip-dev \
+    libicu-dev \
+    zip \
+    unzip \
+    git \
+    nodejs \
+    npm \
+    
 
+# Clear cache
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Enable Apache mod_rewrite for URL rewriting
+RUN a2enmod rewrite
+
+# Install PHP extensions
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \ 
+&& docker-php-ext-install -j$(nproc) gd intl zip exif 
 RUN docker-php-ext-configure pgsql -with-pgsql=/user/local/pgsql \
-    && docker-php-ext-enable intl zip pdo_pgsql pgsql exif
-   
-# copy source code
+&& docker-php-ext-install  pdo pdo_pgsql pgsql 
+# RUN docker-php-ext-install  pdo pdo_pgsql pgsql intl zip exif  
+RUN docker-php-ext-enable intl zip pdo_pgsql pgsql exif
+
+# Configure Apache DocumentRoot to point to Laravel's public directory
+# and update Apache configuration files
+ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
+RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+
+# Copy the application code
 COPY . /var/www/html
 
-# If there is a conf folder under /var/www/html, the start.sh will
-# copy conf/nginx.conf to /etc/nginx/nginx.conf
-# copy conf/nginx-site.conf to /etc/nginx/conf.d/default.conf
-# copy conf/nginx-site-ssl.conf to /etc/nginx/conf.d/default-ssl.conf
+# Set the working directory
+WORKDIR /var/www/html
 
-# copy ssl cert files
-# COPY conf/ssl /etc/nginx/ssl
+# Install composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# China alpine mirror: mirrors.ustc.edu.cn
-ARG APKMIRROR=""
+# Installation et configuration de votre site pour la production
+# https://laravel.com/docs/10.x/deployment#optimizing-configuration-loading
+RUN composer install --no-interaction --optimize-autoloader --no-dev
+# Generate security key
+RUN php artisan key:generate
+# Optimizing Configuration loading
+RUN php artisan config:cache
+# Optimizing Route loading
+RUN php artisan route:cache
+# Optimizing View loading
+RUN php artisan view:cache
+# echo "Running migrations..."
+RUN php artisan migrate --force
 
-# start.sh will set desired timezone with $TZ
-ENV TZ Europe/London
+# Compilation des assets de Breeze (ou de votre site)
+RUN npm install
+RUN npm run buil
 
-# China php composer mirror: https://mirrors.cloud.tencent.com/composer/
-ENV COMPOSERMIRROR="https://packagist.pages.dev"
-# China npm mirror: https://registry.npmmirror.com
-ENV NPMMIRROR="https://registry.npm.taobao.org"
+# Set permissions
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# start.sh will replace default web root from /var/www/html to $WEBROOT
-ENV WEBROOT /var/www/html/public
+# Expose port 80 for Apache.
+EXPOSE 80
 
-# start.sh will use redis as session store with docker container name $PHP_REDIS_SESSION_HOST
-ENV PHP_REDIS_SESSION_HOST redis
-
-# start.sh will create laravel storage folder structure if $CREATE_LARAVEL_STORAGE = 1
-ENV CREATE_LARAVEL_STORAGE "0"
-
-# download required node/php packages, 
-# some node modules need gcc/g++ to build
-RUN if [[ "$APKMIRROR" != "" ]]; then sed -i "s/dl-cdn.alpinelinux.org/${APKMIRROR}/g" /etc/apk/repositories ; fi\
-    && apk add --no-cache --virtual .build-deps gcc g++ libc-dev make \
-    # set preferred npm mirror
-    && cd /usr/local \
-    && if [[ "$NPMMIRROR" != "" ]]; then npm config set registry ${NPMMIRROR}; fi \
-    && npm config set registry $NPMMIRROR \
-    && cd /var/www/html \
-    # install node modules
-    && npm install \
-    # install php composer packages
-    && if [[ "$COMPOSERMIRROR" != "" ]]; then composer config -g repos.packagist composer ${COMPOSERMIRROR}; fi \
-    && composer install --no-interaction --optimize-autoloader \
-    # clean
-    && apk del .build-deps \
-    # build js/css
-    && npm run build \
-
-    # change /var/www/html user/group
-    && chown -Rf nginx.nginx /var/www/html
+# Start Apache web server.
+CMD ["apache2-foreground"]

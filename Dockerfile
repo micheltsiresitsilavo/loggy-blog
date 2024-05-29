@@ -49,8 +49,6 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 # https://laravel.com/docs/10.x/deployment#optimizing-configuration-loading
 RUN composer install --no-interaction --optimize-autoloader --no-dev
 # Generate security key
-RUN php artisan key:generate
-# Optimizing Configuration loading
 RUN php artisan config:cache
 # Optimizing Route loading
 RUN php artisan route:cache

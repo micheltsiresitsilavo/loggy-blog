@@ -3,7 +3,7 @@ FROM tangramor/nginx-php8-fpm
 # Enable Extensions.
 RUN apk add --no-cache --update --virtual .phpize-deps $PHPIZE_DEPS \
     && apk add --no-cache --update --virtual .all-deps $PHP_MODULE_DEPS \
-    && pecl install libpq-dev \
+    && pecl install postgresql-dev \
     && rm -rf /tmp/pear \
     && apk del .all-deps .phpize-deps \
     && rm -rf /var/cache/apk/* /tmp/* /var/tmp/*

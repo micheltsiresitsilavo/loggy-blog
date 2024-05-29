@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
     unzip \
     git \
     nodejs \
-    npm \
+    npm 
     
 
 # Clear cache

@@ -1,10 +1,9 @@
 FROM richarvey/nginx-php-fpm:3.1.6
 
 
-RUN apt-get update && apt-get install -y \
-    nodejs \
-    npm 
-    
+RUN apk add nodejs npm 
+  
+
 # Install PHP extensions
 RUN docker-php-ext-configure pgsql \
 && docker-php-ext-install exif  pdo_pgsql pgsql 

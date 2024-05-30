@@ -48,5 +48,9 @@ RUN npm install
 RUN npm run build
 
 # Set permissions
-RUN chown -R www-data:www-data vendor node_modules
+RUN chgrp -R 0 /usr/local/bin && chmod -R g=u /usr/local/bin
+RUN chown -R www-data:www-data vendor node_modules /data/caddy /config/caddy
 
+
+# Caddy requires an additional capability to bind to port 80 and 443
+setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp

@@ -1,7 +1,7 @@
 FROM dunglas/frankenphp:1.0.3-php8.2 as base
 
 # Be sure to replace "your-domain-name.example.com" by your domain name
-# ENV SERVER_NAME=loggy-blog.onrender.com
+ENV SERVER_NAME=loggy-blog.onrender.com
 
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \

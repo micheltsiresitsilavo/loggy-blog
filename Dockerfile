@@ -32,7 +32,7 @@ RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 COPY . /app
 
 WORKDIR /app
-USER root
+
 # Install composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
@@ -47,10 +47,23 @@ RUN php artisan optimize
 RUN npm install
 RUN npm run build
 
-# Set permissions
-RUN chgrp -R 0 /usr/local/bin && chmod -R g=u /usr/local/bin
-RUN chown -R www-data:www-data vendor node_modules /data/caddy /config/caddy
+ARG USER=application
+ARG UID=1000
+
+RUN \
+    # Add user and group
+    groupadd -g ${UID} ${USER} && \
+    useradd -u ${UID} -g ${USER} -m ${USER};
+ 
 # Caddy requires an additional capability to bind to port 80 and 443
 RUN setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp
+	# Give write access to /data/caddy and /config/caddy
+RUN	chown -R ${USER}:${USER} /data/caddy && chown -R ${USER}:${USER} /config/caddy vendor node_modules 
+
+RUN chgrp -R 0 /usr/local/bin && chmod -R g=u /usr/local/bin
+USER ${USER}
+# Set permissions
+
+
 
 

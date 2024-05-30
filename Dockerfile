@@ -1,19 +1,31 @@
-FROM dunglas/frankenphp:1.0.3-php8.2 as base
+# Use an official PHP image with Apache as the base image.
+FROM php:8.2-apache
 
-# Be sure to replace "your-domain-name.example.com" by your domain name
-ENV SERVER_NAME=loggy-blog.onrender.com
+# Set environment variables.
+ENV ACCEPT_EULA=Y
+LABEL maintainer="er.avinashrathod@gmail.com"
 
-RUN apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+# Install system dependencies.
+RUN apt-get update && apt-get install -y \
+   RUN apt-get update && apt-get install -y \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \
-    unzip \
     libpq-dev \
     libzip-dev \
-    libicu-dev \
+    libicu-dev \  
     nodejs \
-    npm 
+    npm \
+    && rm -rf /var/lib/apt/lists/*
+
+# Enable Apache modules required for Laravel.
+RUN a2enmod rewrite
+
+# Set the Apache document root
+ENV APACHE_DOCUMENT_ROOT /var/www/html/public
+
+# Update the default Apache site configuration
+COPY apache-config.conf /etc/apache2/sites-available/000-default.conf
 
 # Install PHP extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \ 
@@ -23,47 +35,25 @@ RUN docker-php-ext-configure pgsql -with-pgsql=/user/local/pgsql \
 # RUN docker-php-ext-install  pdo pdo_pgsql pgsql intl zip exif  
 RUN docker-php-ext-enable intl zip pdo_pgsql pgsql exif
 
-# Enable PHP production settings
-RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
-
-# Copy the PHP files of your project in the public directory
-# COPY . /app/public
-# If you use Symfony or Laravel, you need to copy the whole project instead:
-COPY . /app
-
-WORKDIR /app
-
-# Install composer
+# Install Composer globally.
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# Installation et configuration de votre site pour la production
-# https://laravel.com/docs/10.x/deployment#optimizing-configuration-loading
-RUN composer install --no-interaction --optimize-autoloader --no-dev
+# Create a directory for your Laravel application.
+WORKDIR /var/www/html
 
-# Optimization
-RUN php artisan optimize
+# Copy the Laravel application files into the container.
+COPY . .
 
-# Compilation des assets de Breeze (ou de votre site)
-RUN npm install
-RUN npm run build
+# Install Laravel dependencies using Composer.
+RUN composer install --no-interaction --optimize-autoloader
 
-ARG USER=application
-ARG UID=1000
+# Set permissions for Laravel.
+RUN chown -R www-data:www-data storage bootstrap/cache
 
-RUN \
-    # Add user and group
-    groupadd -g ${UID} ${USER} && \
-    useradd -u ${UID} -g ${USER} -m ${USER};
- 
-# Caddy requires an additional capability to bind to port 80 and 443
-# RUN setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp
-	# Give write access to /data/caddy and /config/caddy
-RUN	chown -R ${USER}:${USER} /data/caddy && chown -R ${USER}:${USER} /config/caddy vendor node_modules 
+# Expose port 80 for Apache.
+EXPOSE 80
 
-RUN chgrp -R 0 /usr/local/bin && chmod -R g=u /usr/local/bin
-USER ${USER}
-# Set permissions
+# Start Apache web server.
+CMD ["apache2-foreground"]
 
-
-
-
+# You can add any additional configurations or commands required for Laravel 10 here.

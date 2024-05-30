@@ -6,8 +6,8 @@ ENV ACCEPT_EULA=Y
 LABEL maintainer="er.avinashrathod@gmail.com"
 
 # Install system dependencies.
+
 RUN apt-get update && apt-get install -y \
-   RUN apt-get update && apt-get install -y \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \

@@ -1,13 +1,11 @@
-# Exported from Render on 2024-05-30T08:13:10Z
+
 services:
   - type: web
     name: loggy-blog
     runtime: docker
     repo: https://github.com/micheltsiresitsilavo/loggy-blog
     plan: free
-    volumes:
-      - caddy_data:/data
-      - caddy_config:/config
+    ports: 
     envVars:
       - key: DB_USERNAME
         sync: false
@@ -32,9 +30,6 @@ services:
       - key: APP_ENV
         sync: false
     region: oregon
-    healthCheckPath: /status
     dockerContext: .
     dockerfilePath: ./Dockerfile
-volumes:
-  caddy_data:
-  caddy_config:
+

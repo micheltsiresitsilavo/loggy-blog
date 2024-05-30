@@ -46,6 +46,9 @@ COPY . .
 
 # Install Laravel dependencies using Composer.
 RUN composer install --no-interaction --optimize-autoloader
+# Optimization
+RUN php artisan optimize
+RUN npm install && npm run build
 
 # Set permissions for Laravel.
 RUN chown -R www-data:www-data storage bootstrap/cache

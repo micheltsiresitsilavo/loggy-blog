@@ -45,7 +45,7 @@ RUN php artisan optimize
 
 # Compilation des assets de Breeze (ou de votre site)
 RUN npm install
-RUN npm run buil
+RUN npm run build
 
 # Set permissions
 RUN chown -R www-data:www-data vendor node_modules

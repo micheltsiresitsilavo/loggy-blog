@@ -1,7 +1,7 @@
 FROM richarvey/nginx-php-fpm:3.1.6
 
 
-RUN apk add nodejs npm 
+RUN apk add postgresql-dev nodejs npm 
   
 
 # Install PHP extensions

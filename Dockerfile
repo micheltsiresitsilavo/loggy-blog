@@ -56,7 +56,7 @@ RUN \
     useradd -u ${UID} -g ${USER} -m ${USER};
  
 # Caddy requires an additional capability to bind to port 80 and 443
-RUN setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp
+# RUN setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp
 	# Give write access to /data/caddy and /config/caddy
 RUN	chown -R ${USER}:${USER} /data/caddy && chown -R ${USER}:${USER} /config/caddy vendor node_modules 
 

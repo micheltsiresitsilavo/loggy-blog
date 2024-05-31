@@ -25,10 +25,6 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Illuminate\Support\Str;
-use Filament\Forms\Set;
-
-
 
 class PostResource extends Resource
 {
@@ -43,16 +39,15 @@ class PostResource extends Resource
                 [Section::make()->schema(
                [
                 Select::make('category_id')
-                    ->required()
+                 ->required()
                     ->relationship(name: 'category', titleAttribute: 'name'),
-                 TextInput::make('title')
-                ->required()
-                ->maxLength(255)
-                ->live(debounce:1500)
-                ->afterStateUpdated(fn (Set $set, ?string $state) => $set('slug', Str::slug($state))),           
-            TextInput::make('slug')
-                ->required()
-                ->maxLength(255),
+                TextInput::make('title')
+                    ->required()
+                    ->maxLength(255)
+                    ,
+                TextInput::make('slug')
+                    ->required()
+                    ->maxLength(255),
                 SpatieMediaLibraryFileUpload::make('thumbnail')->collection('posts')->disk('public')->preserveFilenames(),
                 RichEditor::make('content'),
                 Toggle::make('is_published')

@@ -10,6 +10,14 @@
             "dest": "/public/build/"
         },
         {
+            "src": "/css/(.*)",
+            "dest": "/public/css/"
+        },
+        {
+            "src": "/js/(.*)",
+            "dest": "/public/js/"
+        },
+        {
             "src": "/resources/(.*)",
             "dest": "/public/resources/"
         },

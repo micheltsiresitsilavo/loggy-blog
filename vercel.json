@@ -6,6 +6,18 @@
     },
     "routes": [
         {
+            "src": "/build/(.*)",
+            "dest": "/public/build/"
+        },
+        {
+            "src": "/resources/(.*)",
+            "dest": "/public/resources/"
+        },
+        {
+            "src": "/favicon/(.*)",
+            "dest": "/public/favicon/"
+        },
+        {
             "src": "/(.*)",
             "dest": "/api/index.php"
         }

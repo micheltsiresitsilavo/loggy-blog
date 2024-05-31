@@ -22,3 +22,4 @@ Route::get('/posts/{id}', [PostController::class, 'show'])->whereNumber('id')->n
 Route::get('/about', function () {
     return view('about');
 });
+
